@@ -16,10 +16,25 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    //app.UseDeveloperExceptionPage();
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    //in dev environment, we want to show the swagger UI
+    // app.UseSwaggerUI(c =>
+    //{
+    //    c.SwaggerEndpoint("/swagger/v1/swagger.json", "VKInsurance API V1");
+    //    c.RoutePrefix = string.Empty; // optional: serve at root
+    //});
+
 }
+//app.UseDeveloperExceptionPage();
+
+//added this for PROD deployment
+app.UseSwagger();
+
+//added this for PROD deployment
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "VKInsurance API V1");
+    c.RoutePrefix = string.Empty; // optional: serve at root
+});
 
 
 app.UseHttpsRedirection();
