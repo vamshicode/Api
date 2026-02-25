@@ -1,50 +1,64 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using VKInsuranceApi.Automapper;
+using VKInsuranceApi.Database;
+using VKInsuranceApi.RepositotyDesignPattern.Implementation;
+using VKInsuranceApi.RepositotyDesignPattern.Interfaces;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
+// Services
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-//swagger 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
-
-//Add services to the container before this line
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
+//JWT AUthentication adding to middleware
+builder.Services.AddAuthentication(options =>
 {
-    //in dev environment, we want to show the swagger UI
-    // app.UseSwaggerUI(c =>
-    //{
-    //    c.SwaggerEndpoint("/swagger/v1/swagger.json", "VKInsurance API V1");
-    //    c.RoutePrefix = string.Empty; // optional: serve at root
-    //});
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
 
-}
-//app.UseDeveloperExceptionPage();
-
-//added this for PROD deployment
-app.UseSwagger();
-
-//added this for PROD deployment
-app.UseSwaggerUI(c =>
+}).AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "VKInsurance API V1");
-    c.RoutePrefix = string.Empty; // optional: serve at root
+    ValidateIssuer = true,
+    ValidateAudience = true,
+    ValidateIssuerSigningKey = true,
+    ValidIssuer = builder.Configuration["Jwt:Issuer"],
+    ValidAudience = builder.Configuration["Jwt:Audience"],
+    ValidateLifetime = true,
+    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
 });
 
 
+builder.Services.AddDbContext<WillisDbContext>(option =>
+    option.UseSqlServer(builder.Configuration.GetConnectionString("WillisDb")));
+builder.Services.AddScoped<ILogin, Login>();
+
+var app = builder.Build();
+
+// Swagger middleware
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "VKInsurance API V1");
+    c.RoutePrefix = "swagger"; // serves at "/swagger"
+
+
+});
+
 app.UseHttpsRedirection();
-
-
+app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/", () => Results.Redirect("/swagger"));
-
-
 app.MapControllers();
+//conventional routing
+//app.MapControllerRoute(name: "Default", pattern: "{controller=Home}/{action=Index}/{Id?}");
+
+// Redirect root to Swagger UI
+app.MapGet("/", () => Results.Redirect("/"));
 
 app.Run();
+
